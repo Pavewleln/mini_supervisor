@@ -14,6 +14,9 @@ public:
 	bool waitAll();
 
 	Service* findService(const std::string& name);
+	const std::vector<Service>& services() const;
+
+	bool runOnce();
 
 private:
 	std::vector<Service> services_;

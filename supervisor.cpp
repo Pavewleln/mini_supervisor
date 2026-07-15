@@ -1,37 +1,41 @@
 #include "supervisor.hpp"
+#include <utility>
 
 void Supervisor::addService(Service service) {
 	services_.push_back(std::move(service));
 }
 
 bool Supervisor::startAll() {
+	bool ok = true;
 	for (auto& service : services_) {
 		if (!service.start()) {
-			return false;
+			ok = false;
 		}
 	}
 
-	return true;
+	return ok;
 }
 
 bool Supervisor::stopAll() {
+	bool ok = true;
 	for (auto& service : services_) {
 		if (service.state() == ProcessState::Running && !service.stop()) {
-			return false;
+			ok = false;
 		}
 	}
 
-	return true;
+	return ok;
 }
 
 bool Supervisor::waitAll() {
+	bool ok = true;
 	for (auto& service : services_) {
 		if (!service.wait()) {
-			return false;
+			ok = false;
 		}
 	}
 
-	return true;
+	return ok;
 }
 
 Service* Supervisor::findService(const std::string& name) {
@@ -42,4 +46,30 @@ Service* Supervisor::findService(const std::string& name) {
 	}
 
 	return nullptr;
+}
+
+const std::vector<Service>& Supervisor::services() const {
+	return services_;
+}
+
+bool Supervisor::runOnce() {
+	bool ok = true;
+
+	for (auto& service : services_) {
+		if (!service.readLogs()) {
+			ok = false;
+		}
+
+		if (service.state() == ProcessState::Running) {
+			if (!service.poll()) {
+				ok = false;
+			}
+		}
+
+		if (!service.readLogs()) {
+			ok = false;
+		}
+	}
+
+	return ok;
 }

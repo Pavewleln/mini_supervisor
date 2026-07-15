@@ -1,5 +1,7 @@
 #pragma once
 
+#include "file_descriptor.hpp"
+
 #include <string>
 #include <vector>
 #include <sys/types.h>
@@ -19,6 +21,7 @@ public:
 	bool start();
 	bool stop();
 	bool wait();
+	bool poll();
 
 	pid_t pid() const;
 
@@ -28,6 +31,11 @@ public:
 	int lastSignal() const;
 	int lastExitCode() const;
 
+	int stdoutFd() const;
+	int stderrFd() const;
+
+	ssize_t readStdout(char* buffer, size_t size);
+	ssize_t readStderr(char* buffer, size_t size);
 private:
 	std::string path_;
 	std::vector<std::string> args_;
@@ -36,6 +44,11 @@ private:
 	int lastStatus_ = 0;
 	int lastExitCode_ = -1;
 	int lastSignal_ = -1;
+
+	FileDescriptor stdoutRead_;
+	FileDescriptor stdoutWrite_;
+	FileDescriptor stderrRead_;
+	FileDescriptor stderrWrite_;
 
 	pid_t pid_ = -1;
 };

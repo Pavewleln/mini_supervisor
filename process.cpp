@@ -5,6 +5,18 @@
 #include <sys/wait.h>
 #include <cstring>
 #include <cerrno>
+#include <fcntl.h>
+
+namespace {
+	bool setNonBlocking(int fd) {
+		int flags = fcntl(fd, F_GETFL, 0);
+		if (flags == -1) {
+			return false;
+		}
+
+		return fcntl(fd, F_SETFL, flags | O_NONBLOCK) != -1;
+	}
+}
 
 Process::Process(std::string path, std::vector<std::string> args)
 	: path_(path), args_(args) {}
@@ -15,17 +27,69 @@ bool Process::start() {
 		return false;
 	}
 
-	pid_ = fork();
-
-	if (pid_ == -1) {
-		std::cerr << "fork error: " << std::strerror(errno) << "\n";
+	int stdoutPipe[2];
+	if (pipe(stdoutPipe) == -1) {
+		std::cerr << "stdout pipe error: " << std::strerror(errno) << "\n";
 		state_ = ProcessState::Failed;
 		return false;
 	}
 
-	if (pid_ == 0) {
-		std::vector<char*> argv;
+	stdoutRead_.reset(stdoutPipe[0]);
+	stdoutWrite_.reset(stdoutPipe[1]);
 
+	int stderrPipe[2];
+	if (pipe(stderrPipe) == -1) {
+		std::cerr << "stderr pipe error: " << std::strerror(errno) << "\n";
+		stdoutRead_.reset();
+		stdoutWrite_.reset();
+		state_ = ProcessState::Failed;
+		return false;
+	}
+
+	stderrRead_.reset(stderrPipe[0]);
+	stderrWrite_.reset(stderrPipe[1]);
+
+	pid_ = fork();
+
+	/* error */
+	if (pid_ == -1) {
+		std::cerr << "fork error: " << std::strerror(errno) << "\n";
+		stdoutRead_.reset();
+		stdoutWrite_.reset();
+		stderrRead_.reset();
+		stderrWrite_.reset();
+		state_ = ProcessState::Failed;
+		return false;
+	}
+
+	/* child */
+	if (pid_ == 0) {
+
+		if (setpgid(0, 0) == -1) {
+			std::cerr << "setpgid error: " << std::strerror(errno) << "\n";
+			_exit(1);
+		}
+
+		/* stdout */
+		stdoutRead_.reset();
+		if (dup2(stdoutWrite_.get(), STDOUT_FILENO) == -1) {
+			std::cerr << "dup2 error: " << std::strerror(errno) << "\n";
+			_exit(1);
+		}
+
+		stdoutWrite_.reset();
+
+		/* stderr */
+		stderrRead_.reset();
+		if (dup2(stderrWrite_.get(), STDERR_FILENO) == -1) {
+			std::cerr << "dup2 error: " << std::strerror(errno) << "\n";
+			_exit(1);
+		}
+
+		stderrWrite_.reset();
+
+		/* argv */
+		std::vector<char*> argv;
 		argv.push_back(const_cast<char*>(path_.c_str()));
 
 		for(auto& arg : args_)
@@ -36,6 +100,26 @@ bool Process::start() {
 		execvp(argv[0], argv.data());
 		std::cerr << "execvp error: " << std::strerror(errno) << "\n";
 		_exit(1);
+	}
+
+	/* parent */
+
+	/* stdout */
+	stdoutWrite_.reset();
+
+	if (!setNonBlocking(stdoutRead_.get())) {
+		std::cerr << "fcntl stdout error: " << std::strerror(errno) << "\n";
+		state_ = ProcessState::Failed;
+		return false;
+	}
+
+	/* stderr */
+	stderrWrite_.reset();
+
+	if (!setNonBlocking(stderrRead_.get())) {
+		std::cerr << "fcntl stderr error: " << std::strerror(errno) << "\n";
+		state_ = ProcessState::Failed;
+		return false;
 	}
 
 	state_ = ProcessState::Running;
@@ -49,7 +133,7 @@ bool Process::stop() {
 		return false;
 	}
 
-	if (kill(pid_, SIGTERM) == -1) {
+	if (kill(-pid_, SIGTERM) == -1) {
 		std::cerr << "kill error: " << std::strerror(errno) << "\n";
 		return false;
 	}
@@ -82,6 +166,54 @@ bool Process::wait() {
 	return true;
 }
 
+bool Process::poll() {
+	if (!isRunning()) {
+		return true;
+	}
+
+	int status = 0;
+
+	pid_t pid = waitpid(pid_, &status, WNOHANG);
+
+	/* error */
+	if (pid == -1) {
+		std::cerr << "waitpid error: " << std::strerror(errno) << "\n";
+		state_ = ProcessState::Failed;
+		return false;
+	}
+
+	/* child */
+	if (pid == 0) {
+		return true;
+	}
+
+	/* parent */
+
+	lastStatus_ = status;
+
+	if (WIFEXITED(status)) {
+		lastExitCode_ = WEXITSTATUS(status);
+		lastSignal_ = -1;
+		state_ = ProcessState::Exited;
+	}
+
+	if (WIFSIGNALED(status)) {
+		lastSignal_ = WTERMSIG(status);
+		lastExitCode_ = -1;
+		state_ = ProcessState::Stopped;
+	}
+
+	return true;
+}
+
+int Process::stdoutFd() const {
+	return stdoutRead_.get();
+}
+
+int Process::stderrFd() const {
+	return stderrRead_.get();
+}
+
 pid_t Process::pid() const {
 	return pid_;
 }
@@ -100,4 +232,11 @@ int Process::lastSignal() const {
 
 int Process::lastExitCode() const {
 	return lastExitCode_;
+}
+
+ssize_t Process::readStdout(char* buffer, size_t size) {
+	return read(stdoutRead_.get(), buffer, size);
+}
+ssize_t Process::readStderr(char* buffer, size_t size) {
+	return read(stderrRead_.get(), buffer, size);
 }
