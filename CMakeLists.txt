@@ -25,3 +25,17 @@ target_compile_options(mini_supervisor PRIVATE
     -Wextra
     -pedantic
 )
+
+add_executable(mini_supervisorctl
+    mini_supervisorctl.cpp
+)
+
+target_include_directories(mini_supervisorctl PRIVATE
+    json/single_include
+)
+
+target_compile_options(mini_supervisorctl PRIVATE
+    -Wall
+    -Wextra
+    -pedantic
+)
