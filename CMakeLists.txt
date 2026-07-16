@@ -12,6 +12,7 @@ add_executable(mini_supervisor
     process.cpp
     service.cpp
     supervisor.cpp
+    http_server.cpp
     file_descriptor.cpp
 )
 
