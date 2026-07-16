@@ -1,0 +1,32 @@
+{
+  "services": [
+    {
+      "name": "worker-logger",
+      "command": "./build/worker_logger",
+      "args": [],
+      "restart": false,
+      "max_restarts": 0
+    },
+    {
+      "name": "worker-crash",
+      "command": "./build/worker_crash",
+      "args": [],
+      "restart": true,
+      "max_restarts": 3
+    },
+    {
+      "name": "worker-ignore-term",
+      "command": "./build/worker_ignore_term",
+      "args": [],
+      "restart": false,
+      "max_restarts": 0
+    },
+    {
+      "name": "worker-memory",
+      "command": "./build/worker_memory",
+      "args": ["16"],
+      "restart": false,
+      "max_restarts": 0
+    }
+  ]
+}

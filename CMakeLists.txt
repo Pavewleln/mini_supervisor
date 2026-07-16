@@ -39,3 +39,24 @@ target_compile_options(mini_supervisorctl PRIVATE
     -Wextra
     -pedantic
 )
+
+add_executable(worker_logger
+    workers/logger.cpp
+)
+
+add_executable(worker_crash
+    workers/crash_worker.cpp
+)
+
+add_executable(worker_ignore_term
+    workers/ignore_term.cpp
+)
+
+add_executable(worker_memory
+    workers/memory_worker.cpp
+)
+
+target_compile_options(worker_logger PRIVATE -Wall -Wextra -pedantic)
+target_compile_options(worker_crash PRIVATE -Wall -Wextra -pedantic)
+target_compile_options(worker_ignore_term PRIVATE -Wall -Wextra -pedantic)
+target_compile_options(worker_memory PRIVATE -Wall -Wextra -pedantic)
