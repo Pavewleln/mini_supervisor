@@ -68,6 +68,7 @@ int main(int argc, char* argv[]) {
 
 	for (const auto& service : supervisor.services()) {
 		std::cout << "service: " << service.name() << "\n";
+		std::cout << "state: " << toString(service.state()) << "\n";
 		std::cout << "restarts: " << service.restartCount() << "\n";
 		std::cout << "stdout:\n" << service.stdoutLog();
 		std::cout << "stderr:\n" << service.stderrLog();

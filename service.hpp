@@ -6,6 +6,18 @@
 #include <fstream>
 #include <deque>
 
+enum class ServiceState {
+	Starting,
+	Running,
+	Stopping,
+	Exited,
+	Crashed,
+	Restarting,
+	Failed
+};
+
+const char* toString(ServiceState state);
+
 class Service {
 public:
 	explicit Service(std::string name, std::string path, std::vector<std::string> args, bool restartEnabled, int maxRestarts);
@@ -17,7 +29,7 @@ public:
 	bool poll();
 
 	const std::string& name() const;
-	ProcessState state() const;
+	ServiceState state() const;
 	int restartCount() const;
 
 	bool readLogs();
@@ -28,6 +40,7 @@ private:
 	std::string name_;
 	Process process_;
 	bool restartEnabled_;
+	ServiceState state_ = ServiceState::Exited;
 	int restartCount_ = 0;
 	int maxRestarts_;
 
@@ -39,6 +52,7 @@ private:
 	std::ofstream stderrFile_;
 
 	bool ensureLogFiles();
+	void updateStateFromProcess();
 	void appendLogChunk(std::deque<std::string>& lines, std::string& pendingLine, const char* buffer, size_t size);
 	std::string buildLogString(const std::deque<std::string>& lines, const std::string& pendingLine) const;
 };

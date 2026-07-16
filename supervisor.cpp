@@ -19,7 +19,7 @@ bool Supervisor::startAll() {
 bool Supervisor::stopAll() {
 	bool ok = true;
 	for (auto& service : services_) {
-		if (service.state() == ProcessState::Running && !service.stopGracefully(3000)) {
+		if (service.state() == ServiceState::Running && !service.stopGracefully(3000)) {
 			ok = false;
 		}
 	}
@@ -60,7 +60,7 @@ bool Supervisor::runOnce() {
 			ok = false;
 		}
 
-		if (service.state() == ProcessState::Running) {
+		if (service.state() == ServiceState::Running) {
 			if (!service.poll()) {
 				ok = false;
 			}
