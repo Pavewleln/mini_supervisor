@@ -13,6 +13,10 @@ bool Service::stop() {
 	return process_.stop();
 }
 
+bool Service::stopGracefully(int timeoutMs) {
+	return process_.gracefulStop(timeoutMs);
+}
+
 bool Service::wait() {
 	if (!process_.wait()) {
 		return false;

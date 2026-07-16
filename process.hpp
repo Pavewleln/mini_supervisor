@@ -20,11 +20,14 @@ public:
 
 	bool start();
 	bool stop();
+	bool forceKill();
+	bool gracefulStop(int timeoutMs);
 	bool wait();
 	bool poll();
 
 	pid_t pid() const;
 
+	bool isAlive() const;
 	bool isRunning() const;
 	ProcessState state() const;
 

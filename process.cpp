@@ -6,6 +6,8 @@
 #include <cstring>
 #include <cerrno>
 #include <fcntl.h>
+#include <algorithm>
+#include <csignal>
 
 namespace {
 	bool setNonBlocking(int fd) {
@@ -141,6 +143,79 @@ bool Process::stop() {
 	return true;
 }
 
+bool Process::forceKill() {
+	if (!isAlive()) {
+		std::cerr << "process is not alive\n";
+		return false;
+	}
+
+	if (kill(-pid_, SIGKILL) == -1) {
+		if (errno == ESRCH) {
+			return poll() && !isAlive();
+		}
+
+		std::cerr << "kill error: " << std::strerror(errno) << "\n";
+		return false;
+	}
+
+	return true;
+}
+
+bool Process::gracefulStop(int timeoutMs) {
+	if (!isRunning()) {
+		std::cerr << "process is not running\n";
+		return false;
+	}
+
+	if (!stop()) {
+		return false;
+	}
+
+	const int stepUs = 100 * 1000;
+	int elapsedUs = 0;
+	const int timeoutUs = timeoutMs * 1000;
+
+	while (elapsedUs < timeoutUs) {
+		if (!poll()) {
+			return false;
+		}
+
+		if (!isAlive()) {
+			return true;
+		}
+
+		int sleepUs = std::min(stepUs, timeoutUs - elapsedUs);
+		usleep(sleepUs);
+		elapsedUs += sleepUs;
+	}
+
+	if (!poll()) {
+		return false;
+	}
+
+	if (!isAlive()) {
+		return true;
+	}
+
+	if (!forceKill()) {
+		return false;
+	}
+
+	if (isRunning()) {
+		return wait();
+	}
+
+	const int killWaitUs = 1000 * 1000;
+	int killElapsedUs = 0;
+
+	while (isAlive() && killElapsedUs < killWaitUs) {
+		usleep(stepUs);
+		killElapsedUs += stepUs;
+	}
+
+	return !isAlive();
+}
+
 bool Process::wait() {
 	int status = 0;
 	if (waitpid(pid_, &status, 0) == -1) {
@@ -216,6 +291,18 @@ int Process::stderrFd() const {
 
 pid_t Process::pid() const {
 	return pid_;
+}
+
+bool Process::isAlive() const {
+	if (pid_ <= 0) {
+		return false;
+	}
+
+	if (kill(-pid_, 0) == 0) {
+		return true;
+	}
+
+	return errno == EPERM;
 }
 
 bool Process::isRunning() const {

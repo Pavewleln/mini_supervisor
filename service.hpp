@@ -10,6 +10,7 @@ public:
 
 	bool start();
 	bool stop();
+	bool stopGracefully(int timeoutMs);
 	bool wait();
 	bool poll();
 
