@@ -7,16 +7,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(mini_supervisor
-    main.cpp
-    config.cpp
-    process.cpp
-    service.cpp
-    supervisor.cpp
-    http_server.cpp
-    file_descriptor.cpp
+    src/main.cpp
+    src/config.cpp
+    src/process.cpp
+    src/service.cpp
+    src/supervisor.cpp
+    src/http_server.cpp
+    src/file_descriptor.cpp
 )
 
 target_include_directories(mini_supervisor PRIVATE
+    include
     json/single_include
 )
 
@@ -27,10 +28,11 @@ target_compile_options(mini_supervisor PRIVATE
 )
 
 add_executable(mini_supervisorctl
-    mini_supervisorctl.cpp
+    src/mini_supervisorctl.cpp
 )
 
 target_include_directories(mini_supervisorctl PRIVATE
+    include
     json/single_include
 )
 
