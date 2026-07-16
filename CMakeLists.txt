@@ -15,6 +15,10 @@ add_executable(mini_supervisor
     file_descriptor.cpp
 )
 
+target_include_directories(mini_supervisor PRIVATE
+    json/single_include
+)
+
 target_compile_options(mini_supervisor PRIVATE
     -Wall
     -Wextra
