@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <algorithm>
 #include <csignal>
+#include <fstream>
+#include <sstream>
 
 namespace {
 	bool setNonBlocking(int fd) {
@@ -319,6 +321,33 @@ int Process::lastSignal() const {
 
 int Process::lastExitCode() const {
 	return lastExitCode_;
+}
+
+long Process::memoryRssKb() const {
+	if (!isAlive()) {
+		return -1;
+	}
+
+	std::ifstream statusFile("/proc/" + std::to_string(pid_) + "/status");
+	if (!statusFile.is_open()) {
+		return -1;
+	}
+
+	std::string line;
+	while (std::getline(statusFile, line)) {
+		if (line.rfind("VmRSS:", 0) != 0) {
+			continue;
+		}
+
+		std::istringstream stream(line);
+		std::string key;
+		long value = -1;
+		std::string unit;
+		stream >> key >> value >> unit;
+		return value;
+	}
+
+	return -1;
 }
 
 ssize_t Process::readStdout(char* buffer, size_t size) {

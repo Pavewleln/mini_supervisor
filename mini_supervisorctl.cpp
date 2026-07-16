@@ -127,7 +127,8 @@ namespace {
 		for (const auto& service : body.at("services")) {
 			std::cout << service.at("name").get<std::string>() << "\t";
 			std::cout << service.at("state").get<std::string>() << "\t";
-			std::cout << "restarts=" << service.at("restarts").get<int>() << "\n";
+			std::cout << "restarts=" << service.at("restarts").get<int>() << "\t";
+			std::cout << "rss_kb=" << service.at("memory_rss_kb").get<long>() << "\n";
 		}
 	}
 
@@ -141,7 +142,8 @@ namespace {
 		json body = json::parse(response.body);
 		std::cout << body.at("name").get<std::string>() << "\t";
 		std::cout << body.at("state").get<std::string>() << "\t";
-		std::cout << "restarts=" << body.at("restarts").get<int>() << "\n";
+		std::cout << "restarts=" << body.at("restarts").get<int>() << "\t";
+		std::cout << "rss_kb=" << body.at("memory_rss_kb").get<long>() << "\n";
 	}
 }
 

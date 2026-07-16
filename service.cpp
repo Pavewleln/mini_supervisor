@@ -192,6 +192,10 @@ int Service::restartCount() const {
 	return restartCount_;
 }
 
+long Service::memoryRssKb() const {
+	return process_.memoryRssKb();
+}
+
 bool Service::ensureLogFiles() {
 	if (stdoutFile_.is_open() && stderrFile_.is_open()) {
 		return true;

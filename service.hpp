@@ -31,6 +31,7 @@ public:
 	const std::string& name() const;
 	ServiceState state() const;
 	int restartCount() const;
+	long memoryRssKb() const;
 
 	bool readLogs();
 

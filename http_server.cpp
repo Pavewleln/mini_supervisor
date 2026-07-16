@@ -209,7 +209,8 @@ std::string HttpServer::servicesJson() {
 		services.push_back({
 			{"name", service.name()},
 			{"state", toString(service.state())},
-			{"restarts", service.restartCount()}
+			{"restarts", service.restartCount()},
+			{"memory_rss_kb", service.memoryRssKb()}
 		});
 	}
 
@@ -269,6 +270,7 @@ std::string HttpServer::serviceAction(const std::string& serviceName, const std:
 	return json{
 		{"name", service->name()},
 		{"state", toString(service->state())},
-		{"restarts", service->restartCount()}
+		{"restarts", service->restartCount()},
+		{"memory_rss_kb", service->memoryRssKb()}
 	}.dump();
 }

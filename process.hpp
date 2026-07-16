@@ -33,6 +33,7 @@ public:
 
 	int lastSignal() const;
 	int lastExitCode() const;
+	long memoryRssKb() const;
 
 	int stdoutFd() const;
 	int stderrFd() const;

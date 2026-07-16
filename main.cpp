@@ -104,6 +104,7 @@ int main(int argc, char* argv[]) {
 		std::cout << "service: " << service.name() << "\n";
 		std::cout << "state: " << toString(service.state()) << "\n";
 		std::cout << "restarts: " << service.restartCount() << "\n";
+		std::cout << "memory_rss_kb: " << service.memoryRssKb() << "\n";
 		std::cout << "stdout:\n" << service.stdoutLog();
 		std::cout << "stderr:\n" << service.stderrLog();
 	}
