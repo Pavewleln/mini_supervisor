@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <deque>
 
 class Service {
 public:
@@ -30,10 +31,14 @@ private:
 	int restartCount_ = 0;
 	int maxRestarts_;
 
-	std::string stdoutLog_;
-	std::string stderrLog_;
+	std::deque<std::string> stdoutLines_;
+	std::deque<std::string> stderrLines_;
+	std::string stdoutPendingLine_;
+	std::string stderrPendingLine_;
 	std::ofstream stdoutFile_;
 	std::ofstream stderrFile_;
 
 	bool ensureLogFiles();
+	void appendLogChunk(std::deque<std::string>& lines, std::string& pendingLine, const char* buffer, size_t size);
+	std::string buildLogString(const std::deque<std::string>& lines, const std::string& pendingLine) const;
 };

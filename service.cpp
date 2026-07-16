@@ -2,7 +2,12 @@
 #include <cerrno>
 #include <filesystem>
 #include <iostream>
+#include <sstream>
 #include <unistd.h>
+
+namespace {
+	constexpr size_t kMaxLogLines = 500;
+}
 
 Service::Service(std::string name, std::string path, std::vector<std::string> args, bool restartEnabled, int maxRestarts)
 	: name_(name), process_(path, args), restartEnabled_(restartEnabled), maxRestarts_(maxRestarts) {}
@@ -63,7 +68,7 @@ bool Service::readLogs() {
 	while(true) {
 		ssize_t bytes = process_.readStdout(buffer, sizeof(buffer));
 		if (bytes > 0) {
-			stdoutLog_.append(buffer, bytes);
+			appendLogChunk(stdoutLines_, stdoutPendingLine_, buffer, bytes);
 			stdoutFile_.write(buffer, bytes);
 			stdoutFile_.flush();
 
@@ -89,7 +94,7 @@ bool Service::readLogs() {
 	while(true) {
 		ssize_t bytes = process_.readStderr(buffer, sizeof(buffer));
 		if (bytes > 0) {
-			stderrLog_.append(buffer, bytes);
+			appendLogChunk(stderrLines_, stderrPendingLine_, buffer, bytes);
 			stderrFile_.write(buffer, bytes);
 			stderrFile_.flush();
 
@@ -116,11 +121,11 @@ bool Service::readLogs() {
 }
 
 const std::string Service::stdoutLog() const {
-	return stdoutLog_;
+	return buildLogString(stdoutLines_, stdoutPendingLine_);
 }
 
 const std::string Service::stderrLog() const {
-	return stderrLog_;
+	return buildLogString(stderrLines_, stderrPendingLine_);
 }
 
 const std::string& Service::name() const {
@@ -162,4 +167,31 @@ bool Service::ensureLogFiles() {
 	}
 
 	return true;
+}
+
+void Service::appendLogChunk(std::deque<std::string>& lines, std::string& pendingLine, const char* buffer, size_t size) {
+	for (size_t i = 0; i < size; ++i) {
+		pendingLine.push_back(buffer[i]);
+
+		if (buffer[i] == '\n') {
+			lines.push_back(std::move(pendingLine));
+			pendingLine.clear();
+
+			while (lines.size() > kMaxLogLines) {
+				lines.pop_front();
+			}
+		}
+	}
+}
+
+std::string Service::buildLogString(const std::deque<std::string>& lines, const std::string& pendingLine) const {
+	std::ostringstream stream;
+
+	for (const auto& line : lines) {
+		stream << line;
+	}
+
+	stream << pendingLine;
+
+	return stream.str();
 }
