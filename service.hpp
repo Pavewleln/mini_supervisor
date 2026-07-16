@@ -3,6 +3,7 @@
 #include "process.hpp"
 #include <vector>
 #include <string>
+#include <fstream>
 
 class Service {
 public:
@@ -31,4 +32,8 @@ private:
 
 	std::string stdoutLog_;
 	std::string stderrLog_;
+	std::ofstream stdoutFile_;
+	std::ofstream stderrFile_;
+
+	bool ensureLogFiles();
 };

@@ -1,5 +1,7 @@
 #include "service.hpp"
 #include <cerrno>
+#include <filesystem>
+#include <iostream>
 #include <unistd.h>
 
 Service::Service(std::string name, std::string path, std::vector<std::string> args, bool restartEnabled, int maxRestarts)
@@ -52,12 +54,24 @@ bool Service::poll() {
 }
 
 bool Service::readLogs() {
+	if (!ensureLogFiles()) {
+		return false;
+	}
+
 	char buffer[4096];
 
 	while(true) {
 		ssize_t bytes = process_.readStdout(buffer, sizeof(buffer));
 		if (bytes > 0) {
 			stdoutLog_.append(buffer, bytes);
+			stdoutFile_.write(buffer, bytes);
+			stdoutFile_.flush();
+
+			if (!stdoutFile_) {
+				std::cerr << "stdout log write error for service " << name_ << "\n";
+				return false;
+			}
+
 			continue;
 		}
 
@@ -76,6 +90,14 @@ bool Service::readLogs() {
 		ssize_t bytes = process_.readStderr(buffer, sizeof(buffer));
 		if (bytes > 0) {
 			stderrLog_.append(buffer, bytes);
+			stderrFile_.write(buffer, bytes);
+			stderrFile_.flush();
+
+			if (!stderrFile_) {
+				std::cerr << "stderr log write error for service " << name_ << "\n";
+				return false;
+			}
+
 			continue;
 		}
 
@@ -111,4 +133,33 @@ ProcessState Service::state() const {
 
 int Service::restartCount() const {
 	return restartCount_;
+}
+
+bool Service::ensureLogFiles() {
+	if (stdoutFile_.is_open() && stderrFile_.is_open()) {
+		return true;
+	}
+
+	std::error_code error;
+	std::filesystem::create_directories("logs", error);
+
+	if (error) {
+		std::cerr << "create logs directory error: " << error.message() << "\n";
+		return false;
+	}
+
+	if (!stdoutFile_.is_open()) {
+		stdoutFile_.open("logs/" + name_ + ".out.log", std::ios::app | std::ios::binary);
+	}
+
+	if (!stderrFile_.is_open()) {
+		stderrFile_.open("logs/" + name_ + ".err.log", std::ios::app | std::ios::binary);
+	}
+
+	if (!stdoutFile_.is_open() || !stderrFile_.is_open()) {
+		std::cerr << "open log files error for service " << name_ << "\n";
+		return false;
+	}
+
+	return true;
 }
